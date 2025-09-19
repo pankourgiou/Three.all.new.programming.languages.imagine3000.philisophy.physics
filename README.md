@@ -1,0 +1,1 @@
+Here, I made 3 all new languages..imagine3000 philosophy and physics...they are very similar, a.i. oriented but also aesthetic...for example you can type help and the repl will show you their available commands or type examples and give you some ecamples..i totally think we should put the fun back into computing after all.

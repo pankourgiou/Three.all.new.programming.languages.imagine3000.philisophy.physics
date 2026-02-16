@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Programming REPL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+body {
+    margin: 0;
+    font-family: 'Orbitron', sans-serif;
+    background: radial-gradient(circle at top left, #0f0c29, #302b63, #24243e);
+    color: #00ffea;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+header {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.5);
+    text-align: center;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px #00ffea;
+}
+
+#repl-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+
+#output {
+    flex: 1;
+    background: rgba(0,0,0,0.6);
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-size: 1rem;
+    line-height: 1.4rem;
+    box-shadow: 0 0 20px #00ffea;
+}
+
+#controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+select, #run-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    font-family: 'Orbitron', sans-serif;
+}
+
+select {
+    background: rgba(0,0,0,0.5);
+    color: #00ffea;
+    box-shadow: 0 0 10px #00ffea inset;
+}
+
+#run-btn {
+    background: #00ffea;
+    color: #000;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+#run-btn:hover { background: #00d4c3; }
+
+#input-area {
+    display: flex;
+    gap: 0.5rem;
+}
+
+#input-area input {
+    flex: 1;
+    padding: 0.8rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 10px;
+    outline: none;
+    background: rgba(0,0,0,0.5);
+    color: #00ffea;
+    box-shadow: 0 0 10px #00ffea inset;
+}
+
+.panel {
+    position: fixed;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    padding: 1rem 2rem;
+    border-radius: 15px;
+    box-shadow: 0 0 30px #00ffea;
+    max-height: 70%;
+    overflow-y: auto;
+    display: none;
+    z-index: 10;
+}
+
+.panel h2 {
+    margin-top: 0;
+    text-align: center;
+    color: #ff00ff;
+    text-shadow: 0 0 10px #ff00ff;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: #ff00ff;
+    color: #000;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.close-btn:hover { background: #ff66ff; }
+
+pre { white-space: pre-wrap; word-break: break-word; }
+
+#buttons-container {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+#buttons-container button { background: #ff00ff; color: #000; }
+#buttons-container button:hover { background: #ff66ff; }
+</style>
+</head>
+<body>
+
+<header>🌌 AI Programming REPL</header>
+
+<div id="repl-container">
+
+<div id="buttons-container">
+    <button onclick="togglePanel('help')">💡 Help</button>
+    <button onclick="togglePanel('examples')">📚 Examples</button>
+</div>
+
+<div id="controls">
+    <select id="language-select" onchange="updateExamples()">
+        <option value=".imagine3000">.imagine3000</option>
+        <option value=".philosophy">.philosophy</option>
+        <option value=".physics">.physics</option>
+    </select>
+
+    <select id="example-select" onchange="selectExample()">
+        <!-- Filled dynamically -->
+    </select>
+</div>
+
+<div id="output">Welcome to the AI Programming REPL! Pick a language and example above.</div>
+
+<div id="input-area">
+    <input type="text" id="user-input" placeholder="Type your command here...">
+    <button id="run-btn" onclick="processInput()">Run</button>
+</div>
+</div>
+
+<!-- Help Panel -->
+<div id="help-panel" class="panel">
+    <button class="close-btn" onclick="togglePanel('help')">X</button>
+    <h2>Help</h2>
+    <pre>
+Available languages:
+  .imagine3000 - Surreal creative programming
+  .philosophy  - Reflective abstract programming
+  .physics     - Scientific simulation programming
+
+Commands:
+  print &lt;text&gt;
+  if &lt;condition&gt; then &lt;yes&gt; else &lt;no&gt;
+  loop &lt;n&gt; &lt;action&gt;
+  try &lt;expr&gt; catch &lt;fallback&gt;
+
+Notes:
+- Conditions: "true", "yes", "1", "certain"
+- Loops repeat the action N times
+- try/catch executes the idea, uses fallback if fails
+- Use 'exit' or 'quit' to leave the REPL
+    </pre>
+</div>
+
+<!-- Examples Panel -->
+<div id="examples-panel" class="panel">
+    <button class="close-btn" onclick="togglePanel('examples')">X</button>
+    <h2>Examples</h2>
+    <pre id="examples-text">
+Select a language above to see examples.
+    </pre>
+</div>
+
+<script>
+/* ---------------- REPL Logic ---------------- */
+const EXAMPLES = {
+    ".imagine3000": [
+        {label:"print rainbow code", code:"print rainbow code"},
+        {label:"if true then dream big else stay small", code:"if true then dream big else stay small"},
+        {label:"loop 3 paint stars", code:"loop 3 paint stars"},
+        {label:"try flying machine catch parachute", code:"try flying machine catch parachute"}
+    ],
+    ".philosophy": [
+        {label:'print "I think therefore I am"', code:'print "I think therefore I am"'},
+        {label:"if false then existence else illusion", code:"if false then existence else illusion"},
+        {label:"loop 2 meditate", code:"loop 2 meditate"},
+        {label:"try paradox catch synthesis", code:"try paradox catch synthesis"}
+    ],
+    ".physics": [
+        {label:"print gravity detected", code:"print gravity detected"},
+        {label:"if true then stable orbit else chaos", code:"if true then stable orbit else chaos"},
+        {label:"loop 3 simulate particle", code:"loop 3 simulate particle"},
+        {label:"try experiment catch error law", code:"try experiment catch error law"}
+    ]
+};
+
+let currentLanguage = ".imagine3000";
+
+/* Evaluate conditions */
+function evalCondition(cond) {
+    cond = cond.trim().toLowerCase();
+    return ["true","yes","1","certain"].includes(cond);
+}
+
+/* Language Implementations */
+function imagine3000(code){
+    let tokens = code.trim().split(" ");
+    if(!tokens[0]) return "💭 empty imagination";
+    switch(tokens[0]){
+        case "print": return `✨ ${code.slice(6)}`;
+        case "if":
+            let parts = code.slice(3).split("then");
+            if(parts.length<2) return "Usage: if <cond> then <yes> else <no>";
+            let condVal = evalCondition(parts[0]);
+            let rest = parts[1];
+            let yesNo = rest.includes("else")?rest.split("else"):[rest,""];
+            return condVal?`💡 ${yesNo[0].trim()}`:`🌙 ${yesNo[1].trim()}`;
+        case "loop":
+            let n = parseInt(tokens[1]); if(isNaN(n)) return "Usage: loop <n> <action>";
+            let body = code.split(" ").slice(2).join(" ");
+            return Array(n).fill(`🔁 ${body}`).join("\n");
+        case "try":
+            if(!code.includes("catch")) return "Usage: try <idea> catch <fallback>";
+            let [idea,fallback] = code.slice(4).split("catch");
+            return idea.toLowerCase().includes("fail")?`🚑 fallback: ${fallback.trim()}`:`🚀 succeeded: ${idea.trim()}`;
+        default: return `Unknown .imagine3000 command: ${tokens[0]}`;
+    }
+}
+
+function philosophy(code){
+    let tokens = code.trim().split(" "); if(!tokens[0]) return "🤔 silence";
+    switch(tokens[0]){
+        case "print": return `📜 ${code.slice(6)}`;
+        case "if":
+            let parts = code.slice(3).split("then"); if(parts.length<2) return "Usage: if <cond> then <yes> else <no>";
+            let condVal = evalCondition(parts[0]); let rest=parts[1];
+            let yesNo = rest.includes("else")?rest.split("else"):[rest,""];
+            return condVal?`⚖️ Thesis: ${yesNo[0].trim()}`:`🌀 Antithesis: ${yesNo[1].trim()}`;
+        case "loop":
+            let n = parseInt(tokens[1]); if(isNaN(n)) return "Usage: loop <n> <action>";
+            let body = code.split(" ").slice(2).join(" ");
+            return Array(n).fill(`♻️ Reflect: ${body}`).join("\n");
+        case "try":
+            if(!code.includes("catch")) return "Usage: try <thesis> catch <antithesis>";
+            let [thesis,antithesis]=code.slice(4).split("catch");
+            return thesis.toLowerCase().includes("paradox")?`🔄 Synthesis: ${antithesis.trim()}`:`🧠 Reasoning holds: ${thesis.trim()}`;
+        default: return `Unknown .philosophy command: ${tokens[0]}`;
+    }
+}
+
+function physics(code){
+    let tokens = code.trim().split(" "); if(!tokens[0]) return "⚛️ no experiment";
+    switch(tokens[0]){
+        case "print": return `🔬 ${code.slice(6)}`;
+        case "if":
+            let parts = code.slice(3).split("then"); if(parts.length<2) return "Usage: if <cond> then <yes> else <no>";
+            let condVal = evalCondition(parts[0]); let rest=parts[1];
+            let yesNo = rest.includes("else")?rest.split("else"):[rest,""];
+            return condVal?`✅ Law holds: ${yesNo[0].trim()}`:`❌ Rejected: ${yesNo[1].trim()}`;
+        case "loop":
+            let n = parseInt(tokens[1]); if(isNaN(n)) return "Usage: loop <n> <action>";
+            let body = code.split(" ").slice(2).join(" ");
+            return Array(n).fill(`🔁 Sim step: ${body}`).join("\n");
+        case "try":
+            if(!code.includes("catch")) return "Usage: try <experiment> catch <fallback>";
+            let [experiment,fallback]=code.slice(4).split("catch");
+            return experiment.toLowerCase().includes("error")?`🧯 Using fallback law: ${fallback.trim()}`:`⚡ Experiment succeeded: ${experiment.trim()}`;
+        default: return `Unknown .physics command: ${tokens[0]}`;
+    }
+}
+
+const LANGUAGES = {
+    ".imagine3000": imagine3000,
+    ".philosophy": philosophy,
+    ".physics": physics
+};
+
+/* ---------------- Controls ---------------- */
+function appendOutput(text){
+    const outputDiv=document.getElementById("output");
+    outputDiv.textContent+= "\n"+text;
+    outputDiv.scrollTop=outputDiv.scrollHeight;
+}
+
+function processInput(){
+    const inputEl=document.getElementById("user-input");
+    const userInput=inputEl.value.trim(); if(!userInput) return; inputEl.value="";
+    if(["exit","quit"].includes(userInput.toLowerCase())){ appendOutput("Goodbye!"); return; }
+    const output = LANGUAGES[currentLanguage](userInput);
+    appendOutput(output);
+}
+
+function togglePanel(panel){
+    const el = panel==="help"?document.getElementById("help-panel"):document.getElementById("examples-panel");
+    el.style.display=el.style.display==="block"?"none":"block";
+}
+
+function updateExamples(){
+    const langSelect = document.getElementById("language-select");
+    currentLanguage = langSelect.value;
+    const exSelect = document.getElementById("example-select");
+    exSelect.innerHTML="";
+    EXAMPLES[currentLanguage].forEach((ex,i)=>{
+        const opt = document.createElement("option");
+        opt.value=i; opt.textContent=EXAMPLES[currentLanguage][i].label;
+        exSelect.appendChild(opt);
+    });
+}
+
+function selectExample(){
+    const exSelect=document.getElementById("example-select");
+    const idx=exSelect.value;
+    if(idx!=="") document.getElementById("user-input").value = EXAMPLES[currentLanguage][idx].code;
+}
+
+/* Initialize */
+updateExamples();
+document.getElementById("user-input").addEventListener("keypress",function(e){ if(e.key==="Enter") processInput(); });
+</script>
+
+</body>
+</html>
